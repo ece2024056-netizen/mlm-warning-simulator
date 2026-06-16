@@ -1,0 +1,2173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MLM Pyramid Saturation Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f0e8;
+      --ink: #172123;
+      --muted: #657174;
+      --panel: #ffffff;
+      --line: #dde2dc;
+      --accent: #136f63;
+      --accent-2: #b73a35;
+      --accent-3: #315c99;
+      --gold: #c48a24;
+      --shadow: 0 18px 46px rgba(23, 33, 35, 0.12);
+      --soft-shadow: 0 10px 28px rgba(23, 33, 35, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, rgba(23, 33, 35, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(23, 33, 35, 0.03) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(19, 111, 99, 0.14), transparent 38%),
+        linear-gradient(315deg, rgba(183, 58, 53, 0.10), transparent 42%),
+        var(--bg);
+      background-size: 34px 34px, 34px 34px, auto, auto, auto;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    header {
+      padding: 26px clamp(16px, 4vw, 48px) 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(135deg, #142326 0%, #173d3b 52%, #402525 100%);
+      background-size: 42px 42px, 42px 42px, auto;
+      color: #fff;
+      box-shadow: 0 18px 44px rgba(23, 33, 35, 0.22);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+    }
+
+    .mark svg {
+      width: 30px;
+      height: 30px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2.55rem);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .kicker {
+      margin: 0 0 8px;
+      color: #bfe9dc;
+      font-size: 0.78rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: rgba(255, 255, 255, 0.78);
+      max-width: 760px;
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .status-pill {
+      border-radius: 999px;
+      padding: 9px 13px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      color: #fff;
+      white-space: nowrap;
+      font-weight: 750;
+      font-size: 0.85rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .privacy-link {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #172123;
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 820;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+    }
+
+    .welcome {
+      padding: 34px clamp(16px, 4vw, 48px) 18px;
+      background:
+        linear-gradient(90deg, rgba(23, 33, 35, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(23, 33, 35, 0.04) 1px, transparent 1px),
+        rgba(255, 255, 255, 0.54);
+      background-size: 34px 34px;
+    }
+
+    .welcome-inner {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .welcome-copy,
+    .population-card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .welcome-copy {
+      padding: clamp(20px, 3vw, 32px);
+      display: grid;
+      gap: 16px;
+      align-content: center;
+      border-left: 5px solid var(--accent);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .welcome-copy::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.46) 44%, transparent 62%);
+      transform: translateX(-120%);
+      animation: welcomeSweep 2.8s ease-out 0.35s both;
+      pointer-events: none;
+    }
+
+    .welcome-copy h2 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(1.7rem, 4vw, 3.55rem);
+      line-height: 1;
+      letter-spacing: 0;
+      animation: riseIn 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .welcome-copy p {
+      margin: 0;
+      max-width: 740px;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.6;
+    }
+
+    .welcome-copy > .kicker {
+      animation: riseIn 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .welcome-copy > p:not(.kicker) {
+      animation: riseIn 760ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
+    }
+
+    .intro-animation {
+      width: min(560px, 100%);
+      min-height: 154px;
+      border: 1px solid rgba(49, 92, 153, 0.18);
+      border-radius: 8px;
+      padding: 16px;
+      background:
+        linear-gradient(90deg, rgba(23, 33, 35, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(23, 33, 35, 0.04) 1px, transparent 1px),
+        linear-gradient(180deg, #ffffff, #f6faf7);
+      background-size: 24px 24px, 24px 24px, auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 126px;
+      gap: 14px;
+      align-items: center;
+      animation: riseIn 820ms cubic-bezier(0.2, 0.8, 0.2, 1) 220ms both;
+    }
+
+    .intro-pyramid {
+      display: grid;
+      gap: 7px;
+      justify-items: center;
+      align-content: center;
+      min-width: 0;
+    }
+
+    .intro-bar {
+      height: 18px;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #136f63, #315c99);
+      box-shadow: 0 8px 18px rgba(49, 92, 153, 0.16);
+      transform-origin: center;
+      transform: scaleX(0);
+      animation: growBar 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .intro-bar:nth-child(1) {
+      width: 22%;
+      animation-delay: 360ms;
+    }
+
+    .intro-bar:nth-child(2) {
+      width: 38%;
+      animation-delay: 470ms;
+    }
+
+    .intro-bar:nth-child(3) {
+      width: 56%;
+      animation-delay: 580ms;
+    }
+
+    .intro-bar:nth-child(4) {
+      width: 76%;
+      animation-delay: 690ms;
+    }
+
+    .intro-bar:nth-child(5) {
+      width: 96%;
+      background: linear-gradient(90deg, #c48a24, #b73a35);
+      animation-delay: 800ms;
+    }
+
+    .intro-meter {
+      min-height: 112px;
+      border-left: 1px solid rgba(23, 33, 35, 0.12);
+      padding-left: 14px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+    }
+
+    .intro-meter strong {
+      font-size: 1.6rem;
+      line-height: 1;
+      color: var(--accent-2);
+      animation: pulseCount 1.2s ease-in-out 900ms 2;
+    }
+
+    .intro-meter span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
+      font-weight: 760;
+    }
+
+    .welcome-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      animation: riseIn 760ms cubic-bezier(0.2, 0.8, 0.2, 1) 380ms both;
+    }
+
+    .primary-action,
+    .secondary-action {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-decoration: none;
+      font-weight: 850;
+      border: 1px solid transparent;
+    }
+
+    .primary-action {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #234d93);
+      box-shadow: 0 12px 24px rgba(19, 111, 99, 0.22);
+    }
+
+    .secondary-action {
+      color: var(--ink);
+      border-color: var(--line);
+      background: #fff;
+    }
+
+    .population-card {
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+      border-top: 5px solid var(--accent-3);
+      animation: riseIn 780ms cubic-bezier(0.2, 0.8, 0.2, 1) 140ms both;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .population-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -20% -28% -20%;
+      height: 110px;
+      background: radial-gradient(circle, rgba(49, 92, 153, 0.16) 2px, transparent 3px);
+      background-size: 20px 20px;
+      animation: crowdDrift 12s linear infinite;
+      pointer-events: none;
+    }
+
+    .population-card h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .population-number {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      line-height: 0.96;
+      font-weight: 900;
+      letter-spacing: 0;
+      color: var(--ink);
+      overflow-wrap: anywhere;
+      animation: pulseCount 1.1s ease-in-out 700ms 2;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .live-badge {
+      width: max-content;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(19, 111, 99, 0.24);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #f6fffb;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .live-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .live-stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcfa;
+    }
+
+    .live-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .live-stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 1.1rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .live-stat.down strong {
+      color: var(--accent-2);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(19, 111, 99, 0.45);
+      animation: livePulse 1.35s ease-out infinite;
+    }
+
+    .population-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .source-link {
+      color: var(--accent-3);
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .source-link:hover {
+      text-decoration: underline;
+    }
+
+    main {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      padding: 20px clamp(16px, 4vw, 48px) 36px;
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    .controls,
+    .metric,
+    .chart-panel,
+    .table-panel,
+    .explain {
+      background: rgba(255, 255, 255, 0.93);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .controls {
+      align-self: start;
+      position: sticky;
+      top: 14px;
+      padding: 18px;
+      border-top: 5px solid var(--accent);
+    }
+
+    .controls h2,
+    .chart-panel h2,
+    .table-panel h2,
+    .explain h2 {
+      margin: 0 0 14px;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 720;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 86px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    input[type="number"],
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 9px;
+      color: var(--ink);
+      background: #fbfcfa;
+      font-weight: 720;
+    }
+
+    select {
+      appearance: none;
+      background:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%) calc(100% - 18px) 50% / 7px 7px no-repeat,
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%) calc(100% - 13px) 50% / 7px 7px no-repeat,
+        #fbfcfa;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .scenario-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .scenario-buttons button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff, #f5f8f4);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 760;
+      box-shadow: var(--soft-shadow);
+    }
+
+    .scenario-buttons button:hover {
+      border-color: var(--accent);
+    }
+
+    .dashboard {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 16px;
+      min-height: 118px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 5px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .metric .value {
+      font-size: clamp(1.25rem, 2.3vw, 2rem);
+      line-height: 1;
+      font-weight: 850;
+      overflow-wrap: anywhere;
+    }
+
+    .metric.warning {
+      border-color: rgba(183, 58, 53, 0.45);
+      background: linear-gradient(180deg, rgba(255, 248, 244, 0.98), rgba(255, 255, 255, 0.94));
+    }
+
+    .metric.warning::before {
+      background: linear-gradient(90deg, var(--accent-2), var(--gold));
+    }
+
+    .money-panel,
+    .reality-panel {
+      background: rgba(255, 255, 255, 0.93);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .money-panel {
+      border-top: 5px solid var(--accent);
+    }
+
+    .money-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .money-stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: linear-gradient(180deg, #fff, #f8faf8);
+    }
+
+    .money-stat .label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .money-stat .value {
+      margin-top: 8px;
+      font-size: clamp(1.25rem, 2vw, 1.8rem);
+      font-weight: 900;
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+
+    .money-stat.loss .value {
+      color: var(--accent-2);
+    }
+
+    .reality-panel {
+      border-top: 5px solid var(--accent-2);
+      display: grid;
+      gap: 14px;
+    }
+
+    .reality-panel h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2.4rem);
+      line-height: 1.05;
+    }
+
+    .reality-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .reality-points {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .reality-point {
+      border: 1px solid rgba(183, 58, 53, 0.22);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff7f4;
+    }
+
+    .reality-point strong {
+      display: block;
+      margin-bottom: 7px;
+    }
+
+    .chart-panel {
+      padding: 18px;
+      min-width: 0;
+      border-top: 5px solid var(--accent-3);
+    }
+
+    .chart-subtitle {
+      margin: -6px 0 14px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      border: 1px solid rgba(49, 92, 153, 0.22);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 78% 18%, rgba(183, 58, 53, 0.16), transparent 28%),
+        radial-gradient(circle at 18% 82%, rgba(19, 111, 99, 0.15), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f6f8f5);
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .swatch {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      background: var(--accent);
+    }
+
+    .swatch.red {
+      background: var(--accent-2);
+    }
+
+    .swatch.blue {
+      background: var(--accent-3);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+      gap: 18px;
+    }
+
+    .pyramid-panel {
+      background: rgba(255, 255, 255, 0.93);
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--gold);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .pyramid-panel h2 {
+      margin: 0 0 14px;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .pyramid-visual {
+      display: grid;
+      gap: 7px;
+      justify-items: center;
+      padding: 8px 0 2px;
+      max-height: 680px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-color: rgba(49, 92, 153, 0.45) transparent;
+    }
+
+    .pyramid-level {
+      min-height: 28px;
+      max-width: 100%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 850;
+      text-align: center;
+      padding: 6px 10px;
+      background: linear-gradient(90deg, #136f63, #315c99);
+      box-shadow: 0 8px 18px rgba(49, 92, 153, 0.16);
+    }
+
+    .pyramid-level.warning {
+      background: linear-gradient(90deg, #c48a24, #b73a35);
+    }
+
+    .pyramid-caption {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .table-panel {
+      overflow: hidden;
+      min-width: 0;
+      border-top: 5px solid var(--accent);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-panel h2 {
+      padding: 18px 18px 0;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 430px;
+      border-top: 1px solid var(--line);
+      background: #f8faf8;
+    }
+
+    .table-insights {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px 18px 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(19, 111, 99, 0.04)),
+        #fff;
+      align-content: start;
+    }
+
+    .pressure-mural {
+      grid-column: 1 / -1;
+      min-height: 220px;
+      border: 1px solid rgba(49, 92, 153, 0.18);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      background:
+        linear-gradient(90deg, rgba(23, 33, 35, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(23, 33, 35, 0.04) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(19, 111, 99, 0.10), rgba(183, 58, 53, 0.10)),
+        #fbfcfa;
+      background-size: 28px 28px, 28px 28px, auto, auto;
+    }
+
+    .pressure-mural::before,
+    .pressure-mural::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(19, 111, 99, 0.42) 2px, transparent 3px),
+        radial-gradient(circle, rgba(49, 92, 153, 0.36) 2px, transparent 3px),
+        radial-gradient(circle, rgba(183, 58, 53, 0.28) 2px, transparent 3px);
+      background-size: 26px 26px, 38px 38px, 54px 54px;
+      background-position: 0 0, 12px 16px, 20px 8px;
+      animation: crowdDrift 16s linear infinite;
+      opacity: 0.72;
+    }
+
+    .pressure-mural::after {
+      animation-direction: reverse;
+      animation-duration: 24s;
+      opacity: 0.38;
+      filter: blur(0.2px);
+    }
+
+    .mural-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 58%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+      box-shadow: 0 0 24px rgba(183, 58, 53, 0.28);
+      z-index: 2;
+    }
+
+    .mural-copy {
+      position: absolute;
+      z-index: 3;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      color: var(--ink);
+    }
+
+    .mural-copy strong {
+      font-size: clamp(1.15rem, 2vw, 1.7rem);
+      line-height: 1;
+    }
+
+    .mural-copy span {
+      max-width: 340px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+
+    .insight-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfa;
+      min-height: 150px;
+    }
+
+    .insight-box.warning {
+      border-color: rgba(183, 58, 53, 0.28);
+      background: #fff7f4;
+    }
+
+    .insight-box h3 {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+    }
+
+    .insight-box p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .insight-number {
+      display: block;
+      margin: 8px 0;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--ink);
+      overflow-wrap: anywhere;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1080px;
+      font-size: 0.88rem;
+    }
+
+    th,
+    td {
+      text-align: right;
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: inherit;
+      z-index: 1;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      background: #eef3ed;
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      box-shadow: 0 1px 0 var(--line);
+    }
+
+    th:first-child {
+      z-index: 4;
+    }
+
+    tbody tr {
+      background: #ffffff;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    tbody tr:hover {
+      background: #f6fffb;
+    }
+
+    tbody tr:hover td:first-child {
+      background: #f6fffb;
+    }
+
+    tr.danger td,
+    tr.danger td:first-child {
+      background: #fff3ef;
+    }
+
+    tr.tight td,
+    tr.tight td:first-child {
+      background: #fffaf0;
+    }
+
+    .level-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 64px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eef6f3;
+      color: var(--accent);
+      font-weight: 900;
+      font-size: 0.8rem;
+    }
+
+    .risk-cell {
+      min-width: 132px;
+    }
+
+    .risk-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #e9eee9;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .risk-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #136f63, #c48a24, #b73a35);
+    }
+
+    .money-positive {
+      color: var(--accent);
+      font-weight: 850;
+    }
+
+    .money-negative {
+      color: var(--accent-2);
+      font-weight: 900;
+    }
+
+    .money-neutral {
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .badge.tight {
+      background: var(--gold);
+      color: #251700;
+    }
+
+    .badge.danger {
+      background: var(--accent-2);
+    }
+
+    .explain {
+      padding: 18px;
+      display: grid;
+      gap: 13px;
+      align-content: start;
+      border-top: 5px solid var(--accent-2);
+    }
+
+    .takeaway {
+      border-left: 4px solid var(--accent-2);
+      padding: 11px 12px;
+      background: #fff6f2;
+      border-radius: 0 8px 8px 0;
+      line-height: 1.45;
+      font-weight: 730;
+    }
+
+    .formula {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfa;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .notes {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+
+    .privacy-policy {
+      border: 1px solid rgba(19, 111, 99, 0.24);
+      border-radius: 8px;
+      padding: 14px;
+      background: linear-gradient(180deg, #f6fffb, #ffffff);
+      display: grid;
+      gap: 8px;
+    }
+
+    .privacy-policy h3 {
+      margin: 0;
+      font-size: 0.98rem;
+      letter-spacing: 0;
+    }
+
+    .privacy-policy p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.52;
+    }
+
+    .privacy-policy strong {
+      color: var(--ink);
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .welcome-inner,
+      main,
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .money-grid,
+      .table-insights,
+      .reality-points {
+        grid-template-columns: 1fr;
+      }
+
+      .pressure-mural {
+        min-height: 260px;
+      }
+
+      .live-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .mural-copy {
+        display: grid;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .welcome {
+        padding-top: 18px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .header-actions {
+        justify-content: flex-start;
+      }
+
+      .status-pill {
+        white-space: normal;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-wrap {
+        height: 340px;
+      }
+
+      .intro-animation {
+        grid-template-columns: 1fr;
+      }
+
+      .intro-meter {
+        min-height: auto;
+        border-left: 0;
+        border-top: 1px solid rgba(23, 33, 35, 0.12);
+        padding: 12px 0 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes growBar {
+      from {
+        opacity: 0;
+        transform: scaleX(0);
+      }
+      to {
+        opacity: 1;
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes pulseCount {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.025);
+      }
+    }
+
+    @keyframes welcomeSweep {
+      from {
+        transform: translateX(-120%);
+      }
+      to {
+        transform: translateX(120%);
+      }
+    }
+
+    @keyframes livePulse {
+      70% {
+        box-shadow: 0 0 0 9px rgba(19, 111, 99, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(19, 111, 99, 0);
+      }
+    }
+
+    @keyframes crowdDrift {
+      from {
+        background-position: 0 0, 12px 16px, 20px 8px;
+      }
+      to {
+        background-position: 52px 26px, 88px 54px, 128px 62px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="topbar">
+        <div class="brand">
+          <div class="mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img">
+              <path d="M32 6 58 54H6L32 6Z" fill="#fff" stroke="#1d2324" stroke-width="4" stroke-linejoin="round"/>
+              <path d="M32 19v17" stroke="#b73a35" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="32" cy="45" r="3.5" fill="#b73a35"/>
+            </svg>
+          </div>
+          <div>
+            <p class="kicker">Recruitment math, made visible</p>
+            <h1>MLM Pyramid Saturation Simulator</h1>
+            <p class="subtitle">Show how a recruitment plan that sounds small at one level becomes impossible after repeated geometric expansion.</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a class="privacy-link" href="#privacy">Privacy Policy</a>
+          <div class="status-pill" id="statusPill">Calculating...</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="welcome" aria-label="Welcome">
+      <div class="welcome-inner">
+        <div class="welcome-copy">
+          <p class="kicker">Before you join the downline</p>
+          <h2>See when the promise runs out of people.</h2>
+          <p>Most MLM pitches sound reasonable because they describe only one person recruiting a few more. This simulator shows the whole structure at once: the curve, the pyramid levels, and the population wall it eventually hits.</p>
+          <div class="intro-animation" aria-hidden="true">
+            <div class="intro-pyramid">
+              <div class="intro-bar"></div>
+              <div class="intro-bar"></div>
+              <div class="intro-bar"></div>
+              <div class="intro-bar"></div>
+              <div class="intro-bar"></div>
+            </div>
+            <div class="intro-meter">
+              <strong>5^n</strong>
+              <span>Small asks become impossible levels.</span>
+            </div>
+          </div>
+          <div class="welcome-actions">
+            <a class="primary-action" href="#simulator">Start the simulation</a>
+            <a class="secondary-action" href="#pyramidLevels">View pyramid levels</a>
+            <a class="secondary-action" href="#realityCheck">Reality check</a>
+          </div>
+        </div>
+        <aside class="population-card" aria-label="World population source">
+          <h2>World Population Limit</h2>
+          <div class="live-badge"><span class="live-dot"></span>Live estimate ticking</div>
+          <div class="population-number" id="worldPopulationClock">8,300,000,000</div>
+          <div class="live-stats">
+            <div class="live-stat"><span>Births tick</span><strong id="birthTick">+0</strong></div>
+            <div class="live-stat down"><span>Deaths tick</span><strong id="deathTick">-0</strong></div>
+            <div class="live-stat"><span>Net tick</span><strong id="netTick">+0</strong></div>
+          </div>
+          <p class="population-note">This local simulator uses a Worldometer-referenced estimate seeded from current global estimates, then ticks every second using global birth/death rates. Browser security prevents this local file from directly scraping Worldometer exactly; open <a class="source-link" href="https://www.worldometers.info/world-population/" target="_blank" rel="noopener">Worldometer world population</a> for the external live counter.</p>
+          <p class="population-note" id="capNote">The population input is capped at the current world-population estimate; the simulation may exceed it to show the warning.</p>
+        </aside>
+      </div>
+    </section>
+
+    <main id="simulator">
+      <aside class="controls" aria-label="Simulation controls">
+        <h2>Scenario</h2>
+
+        <div class="field">
+          <label for="recruits">Required recruits per person</label>
+          <div class="input-row">
+            <input id="recruitsRange" type="range" min="2" max="12" step="1" value="5">
+            <input id="recruits" type="number" min="2" max="99" step="1" value="5">
+          </div>
+          <div class="hint">If each person must recruit this many people, level n has recruits<sup>n</sup> people.</div>
+        </div>
+
+        <div class="field">
+          <label for="levels">Levels to simulate</label>
+          <div class="input-row">
+            <input id="levelsRange" type="range" min="4" max="30" step="1" value="17">
+            <input id="levels" type="number" min="4" max="60" step="1" value="17">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="population">Population limit</label>
+          <input id="population" type="number" min="1" step="1000000" value="8300000000">
+          <div class="hint">Default is an approximate 2026 world population. Change it for a country, city, or target market.</div>
+        </div>
+
+        <div class="field">
+          <label for="fee">Starter pack / required purchase</label>
+          <input id="fee" type="number" min="0" step="10" value="500">
+        </div>
+
+        <div class="field">
+          <label for="monthlyCost">Monthly purchases / expenses</label>
+          <input id="monthlyCost" type="number" min="0" step="10" value="50">
+        </div>
+
+        <div class="field">
+          <label for="monthsActive">Months before quitting</label>
+          <input id="monthsActive" type="number" min="1" max="60" step="1" value="12">
+        </div>
+
+        <div class="field">
+          <label for="currency">Currency</label>
+          <select id="currency">
+            <option value="USD">US dollars ($)</option>
+            <option value="INR">Indian rupees (₹)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="exchangeRate">USD to INR rate</label>
+          <input id="exchangeRate" type="number" min="1" step="0.01" value="94.71">
+          <div class="hint">Default uses an approximate June 15, 2026 market rate. Edit it if needed.</div>
+        </div>
+
+        <div class="field">
+          <label for="commission">Commission flowing upward (%)</label>
+          <input id="commission" type="number" min="0" max="100" step="1" value="25">
+        </div>
+
+        <div class="field">
+          <label for="earnerRate">Meaningful earners (%)</label>
+          <input id="earnerRate" type="number" min="0" max="100" step="0.1" value="1">
+          <div class="hint">Default is intentionally conservative: FTC guidance says most participants make little/no money, and some lose money.</div>
+        </div>
+
+        <div class="field">
+          <label for="payoutDepth">Paid downline depth</label>
+          <input id="payoutDepth" type="number" min="1" max="12" step="1" value="5">
+          <div class="hint">A simple money model: a participant can earn from this many future layers below them.</div>
+        </div>
+
+        <div class="scenario-buttons">
+          <button type="button" data-scenario="gentle">3 recruits</button>
+          <button type="button" data-scenario="classic">5 recruits</button>
+          <button type="button" data-scenario="viral">8 recruits</button>
+          <button type="button" data-scenario="reset">Reset</button>
+        </div>
+      </aside>
+
+      <section class="dashboard">
+        <div class="metrics">
+          <div class="metric warning">
+            <div class="label">Breaks population at</div>
+            <div class="value" id="breakLevel">-</div>
+            <div class="hint" id="breakHint">-</div>
+          </div>
+          <div class="metric">
+            <div class="label">People by final level</div>
+            <div class="value" id="finalPeople">-</div>
+            <div class="hint" id="finalPct">-</div>
+          </div>
+          <div class="metric">
+            <div class="label">Expected loss share</div>
+            <div class="value" id="topShare">-</div>
+            <div class="hint">Weighted by modeled loss probability</div>
+          </div>
+          <div class="metric">
+            <div class="label">Bottom level share</div>
+            <div class="value" id="noProfit">-</div>
+            <div class="hint">How much of the pyramid sits at the final level</div>
+          </div>
+        </div>
+
+        <section class="money-panel" id="moneySummary">
+          <h2>Money Impact</h2>
+          <div class="money-grid">
+            <div class="money-stat loss">
+              <div class="label">Modeled loss pool</div>
+              <div class="value" id="lossPool">-</div>
+              <div class="hint">Risk-weighted participant costs across levels</div>
+            </div>
+            <div class="money-stat">
+              <div class="label">Bottom entrant expected net</div>
+              <div class="value" id="bottomNet">-</div>
+              <div class="hint">After startup and recurring costs</div>
+            </div>
+            <div class="money-stat">
+              <div class="label">Early entrant expected net</div>
+              <div class="value" id="earlyNet">-</div>
+              <div class="hint">Still weighted by meaningful-earner rate</div>
+            </div>
+          </div>
+          <div class="welcome-actions" style="margin-top: 14px;">
+            <a class="primary-action" href="#realityCheck">Open the reality check</a>
+          </div>
+        </section>
+
+        <div class="chart-panel">
+          <h2>Growth Curve</h2>
+          <p class="chart-subtitle">Shown on a log scale so the early levels and the population break point can both be seen.</p>
+          <div class="chart-wrap">
+            <canvas id="growthCanvas" width="1100" height="420"></canvas>
+          </div>
+          <div class="legend">
+            <span><i class="swatch"></i>New people on that level</span>
+            <span><i class="swatch blue"></i>Cumulative people</span>
+            <span><i class="swatch red"></i>Population limit</span>
+          </div>
+        </div>
+
+        <section class="pyramid-panel" id="pyramidLevels">
+          <h2>Visual Pyramid Levels</h2>
+          <div class="pyramid-visual" id="pyramidVisual" aria-label="Pyramid level visualization"></div>
+          <p class="pyramid-caption" id="pyramidCaption">Each bar represents one level of the downline. Wider bars mean more people are required at that level.</p>
+        </section>
+
+        <section class="reality-panel" id="realityCheck">
+          <p class="kicker">Reality check</p>
+          <h2>No responsible person should treat "get rich quick" as a plan.</h2>
+          <p>When an MLM depends on constant recruitment, the math becomes the warning. The people near the top may look successful because they sit above many purchases, while later entrants run into saturation, expenses, and impossible recruiting targets.</p>
+          <div class="reality-points">
+            <div class="reality-point">
+              <strong>Most people do not win.</strong>
+              FTC guidance warns that most MLM participants make little or no money, and some lose money after expenses.
+            </div>
+            <div class="reality-point">
+              <strong>Pyramid schemes are illegal.</strong>
+              If rewards mostly come from recruitment instead of real retail sales, that is a major red flag.
+            </div>
+            <div class="reality-point">
+              <strong>Quick money is the bait.</strong>
+              A responsible decision starts by asking who pays, who recruits, and who is left holding the cost.
+            </div>
+          </div>
+          <a class="primary-action" href="#moneySummary">Review the money impact</a>
+        </section>
+
+        <div class="content-grid">
+          <section class="table-panel">
+            <h2>Level Breakdown</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Level</th>
+                    <th>New people</th>
+                    <th>Cumulative</th>
+                    <th>World share</th>
+                    <th>Loss probability</th>
+                    <th>Risk-weighted loss/person</th>
+                    <th>Expected net/person</th>
+                    <th>Best-case net/person</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="levelRows"></tbody>
+              </table>
+            </div>
+            <div class="table-insights">
+              <div class="insight-box warning">
+                <h3>Loss Formula</h3>
+                <p>Expected net subtracts the starter purchase and recurring costs, then adds only risk-weighted commission.</p>
+                <span class="insight-number" id="costPerPerson">-</span>
+                <p>Total modeled cost per participant.</p>
+              </div>
+              <div class="insight-box">
+                <h3>Meaningful Earner Rate</h3>
+                <p>This controls how many participants are modeled as earning meaningful commission instead of just buying in.</p>
+                <span class="insight-number" id="earnerRateReadout">-</span>
+                <p>Lower values make the simulation reflect the FTC warning more strongly.</p>
+              </div>
+              <div class="insight-box warning">
+                <h3>Break Signal</h3>
+                <p>Once the pyramid exceeds the population limit, later levels are mathematically impossible to fill.</p>
+                <span class="insight-number" id="breakSignal">-</span>
+                <p>The table keeps showing those levels so the failure is visible.</p>
+              </div>
+              <div class="pressure-mural" aria-hidden="true">
+                <div class="mural-line"></div>
+                <div class="mural-copy">
+                  <strong>People are finite. Recruitment promises are not.</strong>
+                  <span>The dots keep moving, but the red line is the limit: every level below the top needs a larger crowd than the one before it.</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="explain">
+            <h2>Why It Fails</h2>
+            <div class="takeaway" id="takeaway">A recruitment chain does not need many levels before it asks for more people than exist.</div>
+            <div class="formula" id="formula">level n = r^n</div>
+            <div class="notes">
+              The table separates two problems: population saturation and money concentration. The FTC warns that most people who join MLMs make little or no money, and some lose money; pyramid-style plans become worse when recruitment and inventory purchases drive the payout.
+            </div>
+            <div class="privacy-policy">
+              <h3>Research Notes</h3>
+              <p><strong>FTC:</strong> Most MLM participants make little or no money, and some lose money after expenses.</p>
+              <p><strong>Model:</strong> This page counts startup costs, recurring purchases, and a small meaningful-earner rate so most participants show losses unless assumptions are made very generous.</p>
+              <p><a class="source-link" href="https://consumer.ftc.gov/articles/multi-level-marketing-businesses-and-pyramid-schemes" target="_blank" rel="noopener">Read the FTC consumer guidance</a></p>
+            </div>
+            <div class="privacy-policy" id="privacy">
+              <h3>Privacy Policy</h3>
+              <p><strong>No personal information is collected, stored, sent, or shared by this simulator.</strong></p>
+              <p>All numbers you enter stay inside your browser for the purpose of updating the simulation on this page. There is no sign-in, no tracking code, no analytics, and no server connection in this file.</p>
+            </div>
+            <footer>
+              Population default: about 8.3 billion for 2026, based on UN-style global estimates. This is an educational model, not legal or financial advice.
+            </footer>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const els = {
+      recruits: document.getElementById("recruits"),
+      recruitsRange: document.getElementById("recruitsRange"),
+      levels: document.getElementById("levels"),
+      levelsRange: document.getElementById("levelsRange"),
+      population: document.getElementById("population"),
+      fee: document.getElementById("fee"),
+      monthlyCost: document.getElementById("monthlyCost"),
+      monthsActive: document.getElementById("monthsActive"),
+      currency: document.getElementById("currency"),
+      exchangeRate: document.getElementById("exchangeRate"),
+      commission: document.getElementById("commission"),
+      earnerRate: document.getElementById("earnerRate"),
+      payoutDepth: document.getElementById("payoutDepth"),
+      breakLevel: document.getElementById("breakLevel"),
+      breakHint: document.getElementById("breakHint"),
+      finalPeople: document.getElementById("finalPeople"),
+      finalPct: document.getElementById("finalPct"),
+      topShare: document.getElementById("topShare"),
+      noProfit: document.getElementById("noProfit"),
+      rows: document.getElementById("levelRows"),
+      canvas: document.getElementById("growthCanvas"),
+      statusPill: document.getElementById("statusPill"),
+      takeaway: document.getElementById("takeaway"),
+      formula: document.getElementById("formula"),
+      worldPopulationClock: document.getElementById("worldPopulationClock"),
+      birthTick: document.getElementById("birthTick"),
+      deathTick: document.getElementById("deathTick"),
+      netTick: document.getElementById("netTick"),
+      capNote: document.getElementById("capNote"),
+      pyramidVisual: document.getElementById("pyramidVisual"),
+      pyramidCaption: document.getElementById("pyramidCaption"),
+      lossPool: document.getElementById("lossPool"),
+      bottomNet: document.getElementById("bottomNet"),
+      earlyNet: document.getElementById("earlyNet"),
+      costPerPerson: document.getElementById("costPerPerson"),
+      earnerRateReadout: document.getElementById("earnerRateReadout"),
+      breakSignal: document.getElementById("breakSignal")
+    };
+
+    const populationSeed = 8300000000;
+    const populationSeedTime = new Date("2026-06-15T00:00:00+05:30").getTime();
+    const estimatedBirthsPerSecond = 4.3;
+    const estimatedDeathsPerSecond = 2.0;
+    const estimatedNetPeoplePerSecond = estimatedBirthsPerSecond - estimatedDeathsPerSecond;
+    let livePopulation = null;
+
+    const numberFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+    let lastCurrency = "USD";
+
+    function currentRate() {
+      return Math.max(1, Number(els.exchangeRate.value) || 94.71);
+    }
+
+    function toUsd(amount) {
+      return els.currency.value === "INR" ? amount / currentRate() : amount;
+    }
+
+    function fromUsd(amount) {
+      return els.currency.value === "INR" ? amount * currentRate() : amount;
+    }
+
+    function moneyFmt(amountUsd) {
+      const currency = els.currency.value;
+      const amount = fromUsd(amountUsd);
+      return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0
+      }).format(amount);
+    }
+
+    function moneyClass(value) {
+      if (value > 0) return "money-positive";
+      if (value < 0) return "money-negative";
+      return "money-neutral";
+    }
+
+    function switchCurrency() {
+      const oldCurrency = lastCurrency;
+      const nextCurrency = els.currency.value;
+      if (oldCurrency === nextCurrency) return;
+      const rate = currentRate();
+      const currentFee = Math.max(0, Number(els.fee.value) || 0);
+      const currentMonthlyCost = Math.max(0, Number(els.monthlyCost.value) || 0);
+      els.fee.value = nextCurrency === "INR"
+        ? Math.round(currentFee * rate)
+        : Math.round(currentFee / rate);
+      els.monthlyCost.value = nextCurrency === "INR"
+        ? Math.round(currentMonthlyCost * rate)
+        : Math.round(currentMonthlyCost / rate);
+      lastCurrency = nextCurrency;
+      update();
+    }
+
+    function compact(value) {
+      if (!Number.isFinite(value)) return "too large";
+      return new Intl.NumberFormat("en-US", {
+        notation: "compact",
+        maximumFractionDigits: value >= 1_000_000 ? 1 : 0
+      }).format(value);
+    }
+
+    function pct(value) {
+      if (!Number.isFinite(value)) return "huge";
+      if (value < 0.001) return "<0.001%";
+      return `${value.toFixed(value < 10 ? 2 : 1)}%`;
+    }
+
+    function sumGeometric(r, depth) {
+      let total = 0;
+      for (let i = 1; i <= depth; i += 1) total += Math.pow(r, i);
+      return total;
+    }
+
+    function average(values) {
+      if (!values.length) return 0;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function estimatedWorldPopulation() {
+      const elapsedSeconds = Math.max(0, (Date.now() - populationSeedTime) / 1000);
+      return Math.floor(populationSeed + elapsedSeconds * estimatedNetPeoplePerSecond);
+    }
+
+    function randomPoisson(lambda) {
+      const limit = Math.exp(-lambda);
+      let product = 1;
+      let count = 0;
+      do {
+        count += 1;
+        product *= Math.random();
+      } while (product > limit);
+      return count - 1;
+    }
+
+    function currentTrackedPopulation() {
+      if (livePopulation === null) livePopulation = estimatedWorldPopulation();
+      return Math.max(1, Math.round(livePopulation));
+    }
+
+    function updatePopulationClockOnly() {
+      if (livePopulation === null) livePopulation = estimatedWorldPopulation();
+      const births = randomPoisson(estimatedBirthsPerSecond);
+      const deaths = randomPoisson(estimatedDeathsPerSecond);
+      const net = births - deaths;
+      livePopulation = Math.max(1, livePopulation + net);
+      const trackedPopulation = currentTrackedPopulation();
+      els.worldPopulationClock.textContent = numberFmt.format(trackedPopulation);
+      els.birthTick.textContent = `+${births}`;
+      els.deathTick.textContent = `-${deaths}`;
+      els.netTick.textContent = `${net >= 0 ? "+" : ""}${net}`;
+      els.population.max = trackedPopulation;
+      if ((Number(els.population.value) || 0) > trackedPopulation) {
+        els.population.value = trackedPopulation;
+        update();
+        return;
+      }
+      els.capNote.textContent = `Population input is capped at ${numberFmt.format(trackedPopulation)}. The levels may exceed that limit so the pyramid failure is visible.`;
+    }
+
+    function buildData() {
+      const r = Math.max(2, Math.floor(Number(els.recruits.value) || 5));
+      const levels = Math.max(4, Math.floor(Number(els.levels.value) || 17));
+      const population = Math.max(1, Number(els.population.value) || 8300000000);
+      const fee = toUsd(Math.max(0, Number(els.fee.value) || 0));
+      const monthlyCost = toUsd(Math.max(0, Number(els.monthlyCost.value) || 0));
+      const monthsActive = Math.max(1, Math.floor(Number(els.monthsActive.value) || 12));
+      const commission = Math.max(0, Math.min(100, Number(els.commission.value) || 0)) / 100;
+      const earnerRate = Math.max(0, Math.min(100, Number(els.earnerRate.value) || 0)) / 100;
+      const payoutDepth = Math.max(1, Math.floor(Number(els.payoutDepth.value) || 5));
+      const totalCost = fee + monthlyCost * monthsActive;
+      const rows = [];
+      let cumulative = 1;
+      let breakLevel = null;
+
+      rows.push({
+        level: 0,
+        newPeople: 1,
+        cumulative,
+        populationPct: cumulative / population * 100,
+        optimisticNet: 0,
+        expectedNet: 0,
+        expectedLoss: 0,
+        lossProbability: 0,
+        likelyLoss: false,
+        status: "Founder"
+      });
+
+      for (let level = 1; level <= levels; level += 1) {
+        const newPeople = Math.pow(r, level);
+        cumulative += newPeople;
+        if (breakLevel === null && cumulative > population) breakLevel = level;
+        const remainingDepth = Math.max(0, Math.min(payoutDepth, levels - level));
+        const theoreticalDownline = sumGeometric(r, remainingDepth);
+        const optimisticCommission = theoreticalDownline * fee * commission;
+        const optimisticNet = optimisticCommission - totalCost;
+        const isBottomHeavy = level > Math.max(2, Math.floor(levels * 0.55));
+        const saturationPenalty = cumulative > population ? 0 : cumulative > population * 0.5 ? 0.2 : 1;
+        const positionPenalty = level <= 2 ? 1 : level <= 5 ? 0.55 : isBottomHeavy ? 0.08 : 0.2;
+        const earnProbability = Math.min(1, earnerRate * positionPenalty * saturationPenalty);
+        const expectedCommission = optimisticCommission * earnProbability;
+        const expectedNet = expectedCommission - totalCost;
+        let status = "Recruitable";
+        let likelyLoss = expectedNet < 0;
+        let lossProbability = 1 - earnProbability;
+        if (expectedNet < 0 || isBottomHeavy) {
+          likelyLoss = true;
+        }
+        if (cumulative > population) {
+          status = "Impossible";
+          likelyLoss = true;
+          lossProbability = 1;
+        }
+        else if (cumulative > population * 0.5) status = "Almost saturated";
+        const expectedLoss = lossProbability * totalCost;
+
+        rows.push({
+          level,
+          newPeople,
+          cumulative,
+          populationPct: cumulative / population * 100,
+          optimisticNet,
+          expectedNet,
+          expectedLoss,
+          lossProbability,
+          likelyLoss,
+          status
+        });
+      }
+
+      return { r, levels, population, fee, monthlyCost, monthsActive, commission, earnerRate, payoutDepth, rows, breakLevel, cumulative, totalCost };
+    }
+
+    function drawChart(data) {
+      const canvas = els.canvas;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(640, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(300, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const w = rect.width;
+      const h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const pad = {
+        left: w < 520 ? 44 : 72,
+        right: w < 520 ? 18 : 34,
+        top: w < 520 ? 28 : 34,
+        bottom: w < 520 ? 46 : 56
+      };
+      const chartW = w - pad.left - pad.right;
+      const chartH = h - pad.top - pad.bottom;
+      const maxValue = Math.max(data.population, ...data.rows.map(row => row.cumulative));
+      const logMax = Math.log10(maxValue + 1);
+      const isSmall = w < 520;
+
+      function x(level) {
+        return pad.left + (level / data.levels) * chartW;
+      }
+
+      function y(value) {
+        const log = Math.log10(value + 1);
+        return pad.top + chartH - (log / logMax) * chartH;
+      }
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, "#ffffff");
+      bg.addColorStop(0.55, "#f7faf7");
+      bg.addColorStop(1, "#fff8f4");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const glow = ctx.createRadialGradient(w * 0.74, h * 0.18, 10, w * 0.74, h * 0.18, w * 0.52);
+      glow.addColorStop(0, "rgba(183, 58, 53, 0.18)");
+      glow.addColorStop(1, "rgba(183, 58, 53, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.lineWidth = 1;
+      ctx.font = `${isSmall ? 10 : 12}px Inter, system-ui, sans-serif`;
+      ctx.textBaseline = "middle";
+
+      const ticks = [10, 1000, 1000000, 1000000000, data.population];
+      ticks.forEach(value => {
+        if (value > maxValue) return;
+        const yy = y(value);
+        ctx.strokeStyle = value === data.population ? "rgba(183, 58, 53, 0.26)" : "rgba(23, 33, 35, 0.08)";
+        ctx.setLineDash(value === data.population ? [7, 6] : []);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yy);
+        ctx.lineTo(w - pad.right, yy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (value !== data.population) {
+          ctx.fillStyle = "#657174";
+          ctx.font = `600 ${isSmall ? 10 : 12}px Inter, system-ui, sans-serif`;
+          ctx.fillText(compact(value), isSmall ? 8 : 18, yy);
+        }
+      });
+
+      ctx.strokeStyle = "rgba(23, 33, 35, 0.20)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + chartH);
+      ctx.lineTo(w - pad.right, pad.top + chartH);
+      ctx.stroke();
+
+      const cumulativePoints = data.rows.map(row => ({ level: row.level, value: row.cumulative }));
+      const recruitPoints = data.rows.map(row => ({ level: row.level, value: row.newPeople }));
+
+      function trace(points) {
+        points.forEach((point, index) => {
+          const xx = x(point.level);
+          const yy = y(point.value);
+          if (index === 0) ctx.moveTo(xx, yy);
+          else ctx.lineTo(xx, yy);
+        });
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(x(cumulativePoints[0].level), pad.top + chartH);
+      trace(cumulativePoints);
+      ctx.lineTo(x(cumulativePoints[cumulativePoints.length - 1].level), pad.top + chartH);
+      ctx.closePath();
+      const area = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+      area.addColorStop(0, "rgba(49, 92, 153, 0.28)");
+      area.addColorStop(0.58, "rgba(19, 111, 99, 0.12)");
+      area.addColorStop(1, "rgba(19, 111, 99, 0.02)");
+      ctx.fillStyle = area;
+      ctx.fill();
+
+      function line(points, color, width, alphaGlow = false) {
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        if (alphaGlow) {
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 16;
+          ctx.globalAlpha = 0.45;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = width + 6;
+          ctx.beginPath();
+          trace(points);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        trace(points);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      line(recruitPoints, "#136f63", isSmall ? 2 : 2.5);
+      line(cumulativePoints, "#315c99", isSmall ? 3 : 4, true);
+      ctx.setLineDash([9, 7]);
+      line([{ level: 0, value: data.population }, { level: data.levels, value: data.population }], "#b73a35", 2.2);
+      ctx.setLineDash([]);
+
+      data.rows.forEach(row => {
+        const xx = x(row.level);
+        const yy = y(row.cumulative);
+        ctx.fillStyle = row.level === data.breakLevel ? "#b73a35" : "#ffffff";
+        ctx.strokeStyle = row.level === data.breakLevel ? "#b73a35" : "#315c99";
+        ctx.lineWidth = row.level === data.breakLevel ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(xx, yy, row.level === data.breakLevel ? 6 : 3.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      if (data.breakLevel !== null) {
+        const breakRow = data.rows.find(row => row.level === data.breakLevel) || data.rows[data.rows.length - 1];
+        const bx = x(breakRow.level);
+        const by = y(breakRow.cumulative);
+        ctx.strokeStyle = "rgba(183, 58, 53, 0.32)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx, pad.top + chartH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const label = data.breakLevel > data.levels
+          ? `Level ${data.breakLevel} blocked`
+          : `Breaks at level ${data.breakLevel}`;
+        ctx.font = `800 ${isSmall ? 11 : 13}px Inter, system-ui, sans-serif`;
+        const textW = ctx.measureText(label).width;
+        const boxW = textW + 22;
+        const boxH = 30;
+        const boxX = Math.min(Math.max(bx + 10, pad.left + 4), w - pad.right - boxW);
+        const boxY = Math.max(pad.top + 4, by - boxH - 12);
+        ctx.fillStyle = "#b73a35";
+        roundRect(ctx, boxX, boxY, boxW, boxH, 8);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, boxX + 11, boxY + boxH / 2);
+      }
+
+      ctx.fillStyle = "#657174";
+      ctx.font = `700 ${isSmall ? 10 : 12}px Inter, system-ui, sans-serif`;
+      ctx.textBaseline = "alphabetic";
+      for (let level = 0; level <= data.levels; level += Math.max(1, Math.ceil(data.levels / 8))) {
+        ctx.fillText(String(level), x(level) - 4, h - 16);
+      }
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function renderPyramid(data) {
+      const visibleRows = data.rows.filter(row => row.level > 0);
+      const rows = visibleRows;
+      const maxPeople = Math.max(...visibleRows.map(row => row.newPeople), 1);
+
+      els.pyramidVisual.innerHTML = rows.map(row => {
+        const width = 18 + (Math.log10(row.newPeople + 1) / Math.log10(maxPeople + 1)) * 82;
+        const className = row.level >= data.breakLevel - 1 ? "pyramid-level warning" : "pyramid-level";
+        return `<div class="${className}" style="width:${width}%">Level ${row.level}: ${compact(row.newPeople)}</div>`;
+      }).join("");
+
+      const last = visibleRows[visibleRows.length - 1];
+      els.pyramidCaption.textContent = data.breakLevel === null
+        ? `By level ${last.level}, the pyramid contains ${compact(last.cumulative)} cumulative people.`
+        : `By level ${last.level}, the pyramid contains ${compact(last.cumulative)} cumulative people. It first exceeds the population limit at level ${data.breakLevel}.`;
+    }
+
+    function update() {
+      const trackedPopulation = currentTrackedPopulation();
+      els.worldPopulationClock.textContent = numberFmt.format(trackedPopulation);
+
+      els.recruits.value = Math.max(2, Math.floor(Number(els.recruits.value) || 5));
+      els.recruitsRange.value = Math.min(12, els.recruits.value);
+      els.population.max = trackedPopulation;
+      const enteredPopulation = Number(els.population.value) || trackedPopulation;
+      if (enteredPopulation > trackedPopulation || enteredPopulation < 1) els.population.value = trackedPopulation;
+      const population = Math.max(1, Number(els.population.value) || trackedPopulation);
+      els.levels.max = 60;
+      els.levelsRange.max = 30;
+      els.levels.value = Math.max(4, Math.min(60, Math.floor(Number(els.levels.value) || 17)));
+      els.levelsRange.value = Math.min(30, els.levels.value);
+      els.capNote.textContent = `Population input is capped at ${numberFmt.format(trackedPopulation)}. The levels may exceed that limit so the pyramid failure is visible.`;
+
+      const data = buildData();
+      const final = data.rows[data.rows.length - 1];
+      const profitableRows = data.rows.filter(row => row.level > 0);
+      const likelyLossPeople = profitableRows
+        .reduce((sum, row) => sum + row.newPeople * row.lossProbability, 0);
+      const modeledLossPool = profitableRows
+        .reduce((sum, row) => sum + row.expectedLoss * row.newPeople, 0);
+      const modeledPeople = profitableRows.reduce((sum, row) => sum + row.newPeople, 0);
+      const bottomLevelShare = final.newPeople / Math.max(1, final.cumulative) * 100;
+      const earlyRow = profitableRows.find(row => row.level === 1) || profitableRows[0] || final;
+
+      els.breakLevel.textContent = data.breakLevel === null ? "Not shown" : `Level ${data.breakLevel}`;
+      els.breakHint.textContent = data.breakLevel === null
+        ? "Increase levels to find the breaking point."
+        : `Cumulative recruits pass ${compact(data.population)} people.`;
+      els.finalPeople.textContent = compact(final.cumulative);
+      els.finalPct.textContent = `${pct(final.populationPct)} of the population limit`;
+      els.topShare.textContent = pct(likelyLossPeople / Math.max(1, modeledPeople) * 100);
+      els.noProfit.textContent = pct(bottomLevelShare);
+      els.lossPool.textContent = moneyFmt(modeledLossPool);
+      els.bottomNet.textContent = moneyFmt(final.expectedNet);
+      els.earlyNet.textContent = moneyFmt(earlyRow.expectedNet);
+      els.costPerPerson.textContent = moneyFmt(data.totalCost);
+      els.earnerRateReadout.textContent = pct(data.earnerRate * 100);
+      els.breakSignal.textContent = data.breakLevel === null ? "Not reached" : `Level ${data.breakLevel}`;
+      els.statusPill.textContent = data.breakLevel === null
+        ? "Population limit not crossed in this view"
+        : `Breaks at level ${data.breakLevel}`;
+      els.takeaway.textContent = data.breakLevel === null
+        ? `At ${data.r} recruits each, the model has not crossed the population limit within ${data.levels} levels, but the curve is still exponential.`
+        : `At ${data.r} recruits each, the pyramid asks for more than ${compact(data.population)} total people by level ${data.breakLevel}.`;
+      els.formula.textContent = `new people at level n = ${data.r}^n\ncumulative by level n = 1 + ${data.r} + ${data.r}^2 + ... + ${data.r}^n`;
+
+      els.rows.innerHTML = data.rows.map(row => {
+        const className = row.status === "Impossible" ? "danger" : row.status === "Almost saturated" ? "tight" : "";
+        const badgeClass = row.status === "Impossible" ? "danger" : row.status === "Almost saturated" ? "tight" : "";
+        const riskPct = row.level === 0 ? 0 : Math.max(0, Math.min(100, row.lossProbability * 100));
+        return `
+          <tr class="${className}">
+            <td><span class="level-chip">Level ${row.level}</span></td>
+            <td>${numberFmt.format(row.newPeople)}</td>
+            <td>${numberFmt.format(row.cumulative)}</td>
+            <td>${pct(row.populationPct)}</td>
+            <td class="risk-cell">${row.level === 0 ? "-" : `${pct(riskPct)}<div class="risk-track"><div class="risk-fill" style="width:${riskPct}%"></div></div>`}</td>
+            <td class="${moneyClass(-row.expectedLoss)}">${row.level === 0 ? "-" : moneyFmt(row.expectedLoss)}</td>
+            <td class="${moneyClass(row.expectedNet)}">${row.level === 0 ? "-" : moneyFmt(row.expectedNet)}</td>
+            <td class="${moneyClass(row.optimisticNet)}">${row.level === 0 ? "-" : moneyFmt(row.optimisticNet)}</td>
+            <td><span class="badge ${badgeClass}">${row.status}</span></td>
+          </tr>
+        `;
+      }).join("");
+
+      drawChart(data);
+      renderPyramid(data);
+    }
+
+    [["recruitsRange", "recruits"], ["recruits", "recruitsRange"], ["levelsRange", "levels"], ["levels", "levelsRange"]].forEach(([source, target]) => {
+      els[source].addEventListener("input", () => {
+        els[target].value = els[source].value;
+        update();
+      });
+    });
+
+    ["population", "fee", "monthlyCost", "monthsActive", "exchangeRate", "commission", "earnerRate", "payoutDepth"].forEach(id => {
+      els[id].addEventListener("input", update);
+    });
+
+    els.currency.addEventListener("change", switchCurrency);
+
+    document.querySelectorAll("[data-scenario]").forEach(button => {
+      button.addEventListener("click", () => {
+        const scenario = button.dataset.scenario;
+        if (scenario === "gentle") {
+          els.recruits.value = 3;
+          els.levels.value = 24;
+        } else if (scenario === "classic") {
+          els.recruits.value = 5;
+          els.levels.value = 17;
+        } else if (scenario === "viral") {
+          els.recruits.value = 8;
+          els.levels.value = 12;
+        } else {
+          els.recruits.value = 5;
+          els.levels.value = 17;
+          els.population.value = 8300000000;
+          els.fee.value = Math.round(fromUsd(500));
+          els.monthlyCost.value = Math.round(fromUsd(50));
+          els.monthsActive.value = 12;
+          els.commission.value = 25;
+          els.earnerRate.value = 1;
+          els.payoutDepth.value = 5;
+        }
+        els.recruitsRange.value = Math.min(12, els.recruits.value);
+        els.levelsRange.value = Math.min(30, els.levels.value);
+        update();
+      });
+    });
+
+    window.addEventListener("resize", update);
+    update();
+    setInterval(updatePopulationClockOnly, 1000);
+  </script>
+</body>
+</html>
